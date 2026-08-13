@@ -1,0 +1,12 @@
+streamlit
+qdrant-client
+langchain
+langchain-groq
+google-generativeai
+Pillow
+numpy
+opencv-python-headless
+python-dotenv
+pandas
+requests
+tqdm
