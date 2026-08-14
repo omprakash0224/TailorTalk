@@ -212,6 +212,41 @@ def query_with_vectors(
     return rerank(candidates, top_k=top_k)
 
 
+def query_by_filter(
+    limit: int = 5,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+) -> List[SareeMatch]:
+    """
+    Fetches sarees based solely on filters (e.g. price) without using vectors.
+    Useful for generic queries like 'Show me sarees under 5000' when no image
+    or previous search context is available.
+    """
+    qdrant_filter = build_filter(min_price, max_price)
+    
+    points, _ = _get_qdrant().scroll(
+        collection_name="sarees",
+        scroll_filter=qdrant_filter,
+        limit=limit,
+        with_payload=True,
+    )
+    
+    candidates: List[SareeMatch] = []
+    for point in points:
+        payload = point.payload or {}
+        match = SareeMatch(
+            sku=payload.get("sku", ""),
+            name=payload.get("name", ""),
+            score=100.0,
+            image_url=payload.get("image_url", ""),
+            product_url=payload.get("product_url", ""),
+            price=float(payload.get("discounted_price", payload.get("retail_price", 0.0))),
+        )
+        candidates.append(match)
+        
+    return candidates
+
+
 class QueryVectors:
     """Container returned by query_similar() carrying the embedded vectors.
 
