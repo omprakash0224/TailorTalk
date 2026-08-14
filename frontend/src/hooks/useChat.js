@@ -56,7 +56,8 @@ export function useChat() {
         formData.append('image_url', imageUrl);
       }
 
-      const response = await fetch('/api/chat', {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
         body: formData,
       });
