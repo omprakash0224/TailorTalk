@@ -39,8 +39,14 @@ CURRENT_SESSION_VECTORS: contextvars.ContextVar[Dict[str, Any]] = contextvars.Co
 )
 
 # The router reads this after the agent returns to include results in the API response
-LAST_TOOL_RESULTS: contextvars.ContextVar[Optional[List[dict]]] = contextvars.ContextVar(
+LAST_TOOL_RESULTS: contextvars.ContextVar[List[dict]] = contextvars.ContextVar(
     "last_tool_results",
+    default=[],
+)
+
+# Holds the temporary path to the uploaded image for the current request
+CURRENT_UPLOADED_IMAGE: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "current_uploaded_image",
     default=None,
 )
 
@@ -62,7 +68,7 @@ _CONTENT_TYPE_TO_EXT = {
 
 class SareeSearchInput(BaseModel):
     image_url: Optional[str] = Field(None, description="Public URL of the query image")
-    image_path: Optional[str] = Field(None, description="Local path of the uploaded image")
+    image_path: Optional[str] = Field(None, description="Leave this empty. The system will automatically use the currently uploaded image.")
     top_k: int = Field(5, description="Number of similar sarees to return, default 5")
     min_price: Optional[float] = Field(None, description="Minimum price filter in INR")
     max_price: Optional[float] = Field(None, description="Maximum price filter in INR")
@@ -86,13 +92,18 @@ def search_similar_sarees(
     If the user has uploaded an image, the path will be in your context, pass it to image_path."""
 
     session_vectors = CURRENT_SESSION_VECTORS.get()
+    active_upload = CURRENT_UPLOADED_IMAGE.get()
+
+    # If the user uploaded an image in this turn but the LLM didn't pass it, use it
+    if not image_url and not image_path and active_upload:
+        image_path = active_upload
 
     # -----------------------------------------------------------------------
     # No image provided — re-use cached vectors from the last search so the
     # user can apply a price filter without re-embedding the query image.
     # -----------------------------------------------------------------------
     if not image_url and not image_path:
-        if session_vectors["gemini"] is not None:
+        if session_vectors.get("gemini") is not None:
             results = query_with_vectors(
                 session_vectors["gemini"],
                 session_vectors["color"],
@@ -102,9 +113,11 @@ def search_similar_sarees(
                 max_price=max_price,
             )
             dict_results = [r.model_dump() for r in results]
-            LAST_TOOL_RESULTS.set(dict_results)
+            results_container = LAST_TOOL_RESULTS.get()
+            results_container.clear()
+            results_container.extend(dict_results)
             return dict_results
-        raise ValueError("Must provide either image_url or image_path")
+        raise ValueError("Must provide either image_url or image_path, or have a previous search to filter.")
 
     # -----------------------------------------------------------------------
     # Download URL image with correct MIME-aware extension
@@ -132,15 +145,17 @@ def search_similar_sarees(
             max_price=max_price,
         )
 
-        # Persist vectors back into the contextvar so the router can store them
-        CURRENT_SESSION_VECTORS.set({
-            "gemini": vectors.gemini,
-            "color": vectors.color,
-            "gemini_border": vectors.gemini_border,
-        })
+        # Mutate the container so changes are visible outside the thread
+        session_vectors["gemini"] = vectors.gemini
+        session_vectors["color"] = vectors.color
+        session_vectors["gemini_border"] = vectors.gemini_border
 
         dict_results = [r.model_dump() for r in results]
-        LAST_TOOL_RESULTS.set(dict_results)
+        
+        results_container = LAST_TOOL_RESULTS.get()
+        results_container.clear()
+        results_container.extend(dict_results)
+        
         return dict_results
 
     finally:
