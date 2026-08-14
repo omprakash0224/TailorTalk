@@ -21,12 +21,9 @@ qdrant = QdrantClient(
     api_key=QDRANT_API_KEY if QDRANT_API_KEY else None,
 )
 
-# Cache the last query vectors for follow-up filter requests ("show cheaper ones")
-LAST_QUERY_VECTORS: dict = {
-    "gemini": None,
-    "color": None,
-    "gemini_border": None,
-}
+# NOTE: LAST_QUERY_VECTORS has been removed.
+# Per-session vector caching is now handled by backend/session_store.py
+# so that each user's query vectors are fully isolated.
 
 
 # ---------------------------------------------------------------------------
@@ -204,6 +201,25 @@ def query_with_vectors(
     return rerank(candidates, top_k=top_k)
 
 
+class QueryVectors:
+    """Container returned by query_similar() carrying the embedded vectors.
+
+    The caller (backend router) is responsible for persisting these in the
+    per-session store so that follow-up price-filter requests can re-use
+    the same vectors without re-embedding the query image.
+    """
+
+    def __init__(
+        self,
+        gemini: np.ndarray,
+        color: np.ndarray,
+        gemini_border: Optional[np.ndarray],
+    ) -> None:
+        self.gemini = gemini
+        self.color = color
+        self.gemini_border = gemini_border
+
+
 def query_similar(
     image_path: str,
     top_k: int = 5,
@@ -211,7 +227,7 @@ def query_similar(
     rrf_limit: int = 20,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
-) -> List[SareeMatch]:
+) -> tuple[List[SareeMatch], "QueryVectors"]:
     """
     Embeds a query image and runs multi-vector RRF search against the Qdrant
     collection.  Uses three embedding signals:
@@ -220,8 +236,12 @@ def query_similar(
     2. HSV colour histogram
     3. Border/pallu-crop Gemini embedding  (RETRIEVAL_QUERY task type)
 
-    Results are cached in LAST_QUERY_VECTORS so follow-up price-filter
-    requests can re-use the same vectors without re-embedding.
+    Returns
+    -------
+    results : List[SareeMatch]
+    vectors : QueryVectors
+        The computed embedding vectors — callers should persist these in the
+        session store for follow-up price-filter requests.
     """
     border_crop_path = None
     try:
@@ -243,12 +263,9 @@ def query_similar(
             except OSError:
                 pass
 
-    # Cache for follow-up filter queries
-    LAST_QUERY_VECTORS["gemini"] = gemini_vec
-    LAST_QUERY_VECTORS["color"] = color_vec
-    LAST_QUERY_VECTORS["gemini_border"] = gemini_border_vec
+    vectors = QueryVectors(gemini=gemini_vec, color=color_vec, gemini_border=gemini_border_vec)
 
-    return query_with_vectors(
+    results = query_with_vectors(
         gemini_vec,
         color_vec,
         gemini_border_vec=gemini_border_vec,
@@ -258,3 +275,4 @@ def query_similar(
         min_price=min_price,
         max_price=max_price,
     )
+    return results, vectors

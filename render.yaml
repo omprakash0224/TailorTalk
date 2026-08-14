@@ -26,8 +26,7 @@ services:
     # ── Health check ──────────────────────────────────────────────────────
     # Render probes this path on the web-service port ($PORT) to decide
     # whether the deployment is healthy before switching traffic.
-    # Streamlit exposes /_stcore/health natively — no extra code needed.
-    healthCheckPath: /_stcore/health
+    healthCheckPath: /api/health
 
     # ── Environment variables ─────────────────────────────────────────────
     # Non-secret, build-time config goes here.
@@ -38,9 +37,6 @@ services:
         value: "1"
       - key: PYTHONDONTWRITEBYTECODE
         value: "1"
-      # Health sidecar port (separate from Streamlit's $PORT)
-      - key: HEALTH_PORT
-        value: "8502"
       # Secret keys — set actual values in the Render dashboard:
       - key: GEMINI_API_KEY
         sync: false          # "sync: false" means Render will prompt for the value

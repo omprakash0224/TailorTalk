@@ -11,6 +11,10 @@
 venv/
 .venv/
 
+# Frontend dependencies and local builds
+frontend/node_modules/
+frontend/dist/
+
 # Local secrets — NEVER bake into the image
 .env
 
