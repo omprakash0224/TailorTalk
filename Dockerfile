@@ -59,8 +59,8 @@ ENV PYTHONUNBUFFERED=1 \
 EXPOSE 8000
 
 # ── Healthcheck (Docker-level) ───────────────────────────────────────────────
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/api/health || exit 1
 
 # ── Entrypoint ───────────────────────────────────────────────────────────────
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -1,0 +1,17 @@
+[server]
+# Render injects $PORT at runtime and the Dockerfile CMD passes it via
+# --server.port flag. Do NOT set 'port' here — it would override that flag.
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+
+# Single worker is sufficient for this app and reduces memory on Render's
+# starter/free tier containers.
+maxUploadSize = 10
+
+[browser]
+# Silence Streamlit's usage-stats prompt at startup.
+gatherUsageStats = false
+
+[theme]
+base = "dark"
