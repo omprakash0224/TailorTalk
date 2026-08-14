@@ -13,6 +13,10 @@
 
 TailorTalk is a conversational visual search platform designed specifically for ethnic fashion (sarees). It combines advanced multi-modal embeddings, deterministic color analysis, and a LangGraph ReAct agent to provide an intuitive, dialogue-driven shopping experience.
 
+## 🎬 Demo
+
+![TailorTalk Demo](demo.gif)
+
 </div>
 
 ## 🚀 Setup Steps
