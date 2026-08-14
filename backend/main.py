@@ -66,25 +66,28 @@ app.include_router(chat_router)
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Health check endpoint to keep the server awake."""
-    return {"status": "ok"}
+    """Health check endpoint to keep the server awake and check dependencies."""
+    qdrant_configured = bool(os.getenv("QDRANT_URL") and os.getenv("QDRANT_API_KEY"))
+    gemini_configured = bool(os.getenv("GEMINI_API_KEY"))
+    groq_configured = bool(os.getenv("GROQ_API_KEY"))
+    
+    is_healthy = qdrant_configured and gemini_configured and groq_configured
+    
+    return {
+        "status": "ok" if is_healthy else "degraded",
+        "dependencies": {
+            "qdrant": "configured" if qdrant_configured else "missing",
+            "gemini": "configured" if gemini_configured else "missing",
+            "groq": "configured" if groq_configured else "missing"
+        }
+    }
 
-# ---------------------------------------------------------------------------
-# Serve the compiled React frontend (production only)
-# ---------------------------------------------------------------------------
-# The Dockerfile builds frontend/ → frontend/dist/ and the image places that
-# at /app/frontend/dist.  We only mount it if the directory exists so that
-# `uvicorn backend.main:app --reload` still works during local development
-# without needing to build the frontend first.
-
-_FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
-
-if _FRONTEND_DIST.exists():
-    # Serve static assets (JS bundles, CSS, images, etc.)
-    app.mount("/assets", StaticFiles(directory=_FRONTEND_DIST / "assets"), name="assets")
-
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def spa_fallback(full_path: str) -> FileResponse:
-        """Catch-all route that returns index.html for client-side routing."""
-        index = _FRONTEND_DIST / "index.html"
-        return FileResponse(str(index))
+@app.get("/", tags=["Info"])
+async def api_info():
+    """Basic endpoint to provide API information."""
+    return {
+        "name": "TailorTalk API Server",
+        "version": "2.0.0",
+        "status": "online",
+        "docs_url": "/docs"
+    }
