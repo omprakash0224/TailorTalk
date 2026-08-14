@@ -14,4 +14,4 @@ maxUploadSize = 10
 gatherUsageStats = false
 
 [theme]
-base = "light"
+base = "dark"

@@ -4,7 +4,6 @@ import numpy as np
 from PIL import Image
 import google.genai as genai
 from google.genai import types
-from google.api_core.exceptions import ResourceExhausted
 
 import time
 
@@ -77,7 +76,6 @@ def embed_image_gemini(
                 "429" in error_str
                 or "Quota exceeded" in error_str
                 or "RESOURCE_EXHAUSTED" in error_str
-                or isinstance(e, ResourceExhausted)
             )
             if is_rate_limit and attempt < max_retries - 1:
                 wait_time = 30 * (attempt + 1)
