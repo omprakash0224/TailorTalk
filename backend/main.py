@@ -46,9 +46,13 @@ _ALLOWED_ORIGINS = [
     "http://localhost:8000",  # uvicorn dev
 ]
 
+if os.getenv("FRONTEND_URL"):
+    _ALLOWED_ORIGINS.append(os.getenv("FRONTEND_URL"))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow Vercel preview environments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,6 +63,11 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 app.include_router(chat_router)
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Health check endpoint to keep the server awake."""
+    return {"status": "ok"}
 
 # ---------------------------------------------------------------------------
 # Serve the compiled React frontend (production only)
