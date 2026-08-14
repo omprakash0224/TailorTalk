@@ -58,14 +58,14 @@ flowchart TD
 
 ## 2. Agent & Backend Request Pipeline
 
-TailorTalk operates a production-grade **FastAPI** backend with asynchronous request handling, request-scoped context variables, a thread-safe in-memory session store, and a **LangGraph ReAct agent** powered by Groq (`llama-3.3-70b-versatile`).
+TailorTalk operates a production-grade **FastAPI** backend with asynchronous request handling, request-scoped context variables, a thread-safe in-memory session store, and a **LangGraph ReAct agent** powered by Groq (`openai/gpt-oss-120b or llama-3.3-70b-versatile`).
 
 **Key Steps:**
 1. **API Endpoint (`POST /api/chat`):** Receives `multipart/form-data` containing `session_id`, `message`, and optional `image` file or `image_url`.
 2. **Session Store & Context Isolation:**
    - Retrieves or initializes session state in `backend/session_store.py` (lazy agent instantiation, conversation history, cached query vectors, TTL eviction).
    - Injects cached session vectors and empty result containers into request-local context variables (`CURRENT_SESSION_VECTORS`, `LAST_TOOL_RESULTS`).
-3. **Async Agent Execution:** Offloads synchronous LangGraph agent execution to a thread-pool executor (`_run_agent_async`) so the FastAPI event loop remains non-blocking.
+3. **Async Agent Execution:** Offloads synchronous LangGraph agent execution via `asyncio.to_thread` (which correctly propagates `contextvars` to the thread) so the FastAPI event loop remains non-blocking.
 4. **Agent Reasoning & Tool Invocation:**
    - Groq LLM evaluates conversation history and user input.
    - For general queries, it generates a conversational reply without calling tools.
@@ -86,7 +86,7 @@ flowchart TD
     D --> E["Offload to Threadpool<br/>_run_agent_async"]
     
     E --> F["LangGraph ReAct Agent<br/>src/agent.py"]
-    F --> G{"LLM Reasoning<br/>Groq LLaMA-3.3"}
+    F --> G{"LLM Reasoning<br/>Groq gpt-oss-120b"}
     
     G -->|General Chit-Chat| H["Generate Conversational Response"]
     

@@ -87,6 +87,6 @@ Users frequently refine visual searches conversationally (e.g., *"Show me cheape
 
 ## 4. Production Resilience & Rate Limiting
 
-1. **Exponential Backoff:** The Gemini API client in `src/embeddings.py` implements exponential backoff retry logic (up to 5 retries with progressive delay) to handle transient rate limits (`429`, `RESOURCE_EXHAUSTED`, `Quota exceeded`).
+1. **Linear Backoff:** The Gemini API client in `src/embeddings.py` implements linear backoff retry logic (waits `30 × attempt` seconds, up to 5 retries) to handle transient rate limits (`429`, `RESOURCE_EXHAUSTED`, `Quota exceeded`).
 2. **MIME-Type & Format Validation:** Image downloads from external URLs validate HTTP headers and convert images to RGB JPEG before feature computation, preventing encoding discrepancies.
 3. **Data Integrity:** Indexing scripts drop duplicate URLs, validate image dimensions (> 0px) and file sizes (> 1 KB), and verify image files with Pillow before indexing.

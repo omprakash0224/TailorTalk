@@ -22,7 +22,7 @@ TailorTalk is a conversational visual search platform designed specifically for 
 - Node.js 18+ (for frontend)
 - Docker (optional, for deployment)
 - API Keys: 
-  - `GROQ_API_KEY` (for LLaMA-3.3-70b-versatile)
+  - `GROQ_API_KEY` (for openai/gpt-oss-120b or llama-3.3-70b-versatile via Groq)
   - `GEMINI_API_KEY` (for Google GenAI embeddings)
   - Qdrant connection details (if using cloud/remote, otherwise local memory/docker)
 
@@ -70,7 +70,7 @@ docker run -p 8000:8000 --env-file .env tailortalk
 ## 🧠 Model, Vector-DB, and Framework Choices
 
 ### Models
-- **Conversational LLM (Agent Reasoning):** `llama-3.3-70b-versatile` via **Groq**. Chosen for ultra-low latency inference, keeping the multi-turn conversational UI highly responsive.
+- **Conversational LLM (Agent Reasoning):** `openai/gpt-oss-120b or llama-3.3-70b-versatile` via **Groq**. Chosen for ultra-low latency inference, keeping the multi-turn conversational UI highly responsive.
 - **Semantic Embeddings:** `models/gemini-embedding-2-preview` via **Google GenAI**. Extracts rich visual features (fabric drape, weave, styling) into 3072-dimensional L2-normalized vectors.
 - **Color Embeddings:** Custom **OpenCV HSV Color Histogram** (96-dimensional, L2-normalized) ensuring absolute color fidelity, which deep neural networks sometimes overlook in favor of structural patterns.
 
@@ -79,7 +79,7 @@ docker run -p 8000:8000 --env-file .env tailortalk
 - **Architecture:** A `sarees` collection utilizing named vectors (`gemini`, `color`) and metadata payload filtering.
 
 ### Frameworks
-- **Backend:** **FastAPI** handles high-concurrency requests asynchronously, serving both the API and the production-built React SPA.
+- **Backend:** **FastAPI** handles high-concurrency requests asynchronously, serving the API. In production, the React SPA is bundled separately (see Docker/deployment notes).
 - **Frontend:** **React 18 + Vite** provides a modern, fast Single Page Application (SPA) with a dedicated Image Studio Sidebar and interactive product grids.
 - **Agent Orchestration:** **LangGraph** orchestrates the ReAct agent, enabling tool calling and conversation history management.
 
