@@ -117,7 +117,19 @@ def search_similar_sarees(
             results_container.clear()
             results_container.extend(dict_results)
             return dict_results
-        raise ValueError("Must provide either image_url or image_path, or have a previous search to filter.")
+            
+        # No image and no previous session vectors — fallback to text/filter search
+        from .qdrant_store import query_by_filter
+        results = query_by_filter(
+            limit=top_k,
+            min_price=min_price,
+            max_price=max_price,
+        )
+        dict_results = [r.model_dump() for r in results]
+        results_container = LAST_TOOL_RESULTS.get()
+        results_container.clear()
+        results_container.extend(dict_results)
+        return dict_results
 
     # -----------------------------------------------------------------------
     # Download URL image with correct MIME-aware extension
