@@ -20,7 +20,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from backend.schemas import ChatResponse, HealthResponse, SareeResult
 from backend import session_store
-from src.search_tool import CURRENT_SESSION_VECTORS, LAST_TOOL_RESULTS
+from src.search_tool import CURRENT_SESSION_VECTORS, LAST_TOOL_RESULTS, CURRENT_UPLOADED_IMAGE
 
 router = APIRouter()
 
@@ -74,28 +74,40 @@ async def chat(
 
         # -----------------------------------------------------------------------
         # Build agent input — append image context hint so the LLM knows to
-        # call the search tool with the right argument.
+        # call the search tool. We use a sanitized version for history.
         # -----------------------------------------------------------------------
         agent_input = message
+        history_input = message
 
         if temp_image_path:
             agent_input += (
-                f"\n[User uploaded an image. Local path: {temp_image_path}. "
-                "Use this path for the image_path argument of search_similar_sarees.]"
+                "\n[System: The user just uploaded an image for this turn. "
+                "Call search_similar_sarees to search for it. You don't need to provide image_url or image_path.]"
             )
+            if history_input:
+                history_input += "\n[Image uploaded]"
+            else:
+                history_input = "[Image uploaded]"
         elif image_url:
             agent_input += (
-                f"\n[User provided an image URL: {image_url}. "
-                "Use this for the image_url argument of search_similar_sarees.]"
+                f"\n[System: The user provided an image URL: {image_url}. "
+                "Pass this URL to the image_url argument of search_similar_sarees.]"
             )
+            if history_input:
+                history_input += f"\n[Image URL provided: {image_url}]"
+            else:
+                history_input = f"[Image URL provided: {image_url}]"
 
         # -----------------------------------------------------------------------
         # Set contextvars for this request's execution context
         # -----------------------------------------------------------------------
-        vectors_token = CURRENT_SESSION_VECTORS.set(
-            copy.deepcopy(session["last_vectors"])
-        )
-        results_token = LAST_TOOL_RESULTS.set(None)
+        vectors_container = copy.deepcopy(session["last_vectors"])
+        vectors_token = CURRENT_SESSION_VECTORS.set(vectors_container)
+        
+        results_container = []
+        results_token = LAST_TOOL_RESULTS.set(results_container)
+        
+        upload_token = CURRENT_UPLOADED_IMAGE.set(temp_image_path)
 
         # -----------------------------------------------------------------------
         # Run the LangGraph agent (synchronous — runs in the default executor)
@@ -107,17 +119,18 @@ async def chat(
         # -----------------------------------------------------------------------
         # Harvest results and updated vectors from contextvars
         # -----------------------------------------------------------------------
-        tool_results: list[dict] | None = LAST_TOOL_RESULTS.get()
-        updated_vectors = CURRENT_SESSION_VECTORS.get()
+        tool_results: list[dict] = results_container
+        updated_vectors = vectors_container
 
         # Reset contextvars
         CURRENT_SESSION_VECTORS.reset(vectors_token)
         LAST_TOOL_RESULTS.reset(results_token)
+        CURRENT_UPLOADED_IMAGE.reset(upload_token)
 
         # -----------------------------------------------------------------------
         # Update session: chat history + cached vectors
         # -----------------------------------------------------------------------
-        session["chat_history"].append(HumanMessage(content=agent_input))
+        session["chat_history"].append(HumanMessage(content=history_input))
         session["chat_history"].append(AIMessage(content=reply))
 
         if updated_vectors.get("gemini") is not None:
@@ -169,11 +182,11 @@ import asyncio
 
 async def _run_agent_async(session: dict, agent_input: str) -> str:
     """Run the synchronous LangGraph agent in a thread-pool executor."""
-    loop = asyncio.get_event_loop()
     from src.agent import run_agent
 
-    reply = await loop.run_in_executor(
-        None,
-        lambda: run_agent(session["agent"], agent_input, session["chat_history"]),
+    # asyncio.to_thread automatically copies contextvars to the thread.
+    # loop.run_in_executor does not.
+    reply = await asyncio.to_thread(
+        run_agent, session["agent"], agent_input, session["chat_history"]
     )
     return reply

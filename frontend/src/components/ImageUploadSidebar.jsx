@@ -6,9 +6,9 @@ import {
   Trash2, 
   Sparkles, 
   Layers, 
-  Filter, 
   ChevronRight,
-  HelpCircle
+  Maximize2,
+  X
 } from 'lucide-react';
 
 export default function ImageUploadSidebar({
@@ -20,6 +20,7 @@ export default function ImageUploadSidebar({
   onQuickPrompt,
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  const [showImagePreviewModal, setShowImagePreviewModal] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
@@ -64,33 +65,59 @@ export default function ImageUploadSidebar({
     { label: "What fabric is this style?", text: "What fabric and weave style is this saree?" }
   ];
 
+  const fileObjectUrl = selectedFile ? URL.createObjectURL(selectedFile) : null;
+
   return (
     <aside className={`sidebar ${!isOpen ? 'sidebar-collapsed' : ''}`} id="search-sidebar">
       <div className="sidebar-header">
         <div className="sidebar-title">
           <Layers size={18} />
-          <span>Visual Search Studio</span>
+          <span>Upload Studio</span>
         </div>
+        <span className="sidebar-badge">Visual Search</span>
       </div>
 
       <div className="sidebar-body">
         {/* Upload Zone */}
         <div>
-          <label className="input-label" style={{ marginBottom: '8px', display: 'block' }}>
-            Query Saree Image
-          </label>
+          <div className="input-label" style={{ marginBottom: '10px' }}>
+            <span>Query Saree Image</span>
+            {selectedFile && <span style={{ color: 'var(--accent-gold-light)', fontSize: '0.75rem' }}>Active Query</span>}
+          </div>
 
           {selectedFile ? (
             <div className="preview-card">
-              <img
-                src={URL.createObjectURL(selectedFile)}
-                alt="Selected saree preview"
-                className="preview-image"
-              />
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={fileObjectUrl}
+                  alt="Selected saree preview"
+                  className="preview-image"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowImagePreviewModal(true)}
+                  style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '6px',
+                    cursor: 'pointer',
+                    display: 'flex'
+                  }}
+                  title="Expand Preview"
+                >
+                  <Maximize2 size={14} />
+                </button>
+              </div>
+
               <div className="preview-actions">
                 <span className="preview-badge">
                   <ImageIcon size={12} />
-                  <span>Image Loaded</span>
+                  <span>{selectedFile.name.length > 18 ? selectedFile.name.substring(0, 15) + '...' : selectedFile.name}</span>
                 </span>
                 <button
                   type="button"
@@ -125,8 +152,8 @@ export default function ImageUploadSidebar({
               </div>
               <div className="dropzone-text">Upload Saree Photo</div>
               <div className="dropzone-subtext">Drag & drop or click to browse</div>
-              <div className="dropzone-subtext" style={{ marginTop: '4px', opacity: 0.7 }}>
-                JPG, PNG, WEBP supported
+              <div className="dropzone-subtext" style={{ marginTop: '6px', color: 'var(--accent-gold-light)', opacity: 0.8, fontSize: '0.72rem' }}>
+                JPG, PNG, WEBP up to 10MB
               </div>
             </div>
           )}
@@ -138,7 +165,8 @@ export default function ImageUploadSidebar({
         {/* URL Input */}
         <div className="input-group">
           <label className="input-label" htmlFor="image-url-input">
-            Image Web URL
+            <span>Image Web URL</span>
+            <LinkIcon size={13} style={{ color: 'var(--text-muted)' }} />
           </label>
           <input
             id="image-url-input"
@@ -155,8 +183,9 @@ export default function ImageUploadSidebar({
 
         {/* Quick Assistant Prompts */}
         <div>
-          <label className="input-label" style={{ marginBottom: '8px', display: 'block' }}>
-            Quick Styling Prompts
+          <label className="input-label" style={{ marginBottom: '10px' }}>
+            <span>Quick Styling Prompts</span>
+            <Sparkles size={13} style={{ color: 'var(--accent-gold)' }} />
           </label>
           <div className="quick-prompts">
             {samplePrompts.map((p, idx) => (
@@ -167,24 +196,73 @@ export default function ImageUploadSidebar({
                 onClick={() => onQuickPrompt(p.text)}
                 id={`quick-prompt-${idx}`}
               >
-                <Sparkles size={13} style={{ flexShrink: 0 }} />
                 <span>{p.label}</span>
+                <ChevronRight size={14} className="quick-prompt-btn-icon" />
               </button>
             ))}
           </div>
         </div>
 
-        {/* How it works info */}
-        <div style={{ marginTop: 'auto', padding: '14px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-gold)' }}>
+        {/* Sidebar Info Footer */}
+        <div className="sidebar-info-box">
+          <div className="sidebar-info-header">
             <Sparkles size={14} />
             <span>AI Dual-Crop Matching</span>
           </div>
-          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+          <p className="sidebar-info-desc">
             Our engine extracts color histograms, body patterns, and intricate zari border weaves for high-precision boutique retrieval.
           </p>
         </div>
       </div>
+
+      {/* Expanded Image Modal */}
+      {showImagePreviewModal && fileObjectUrl && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(12px)',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
+            <button
+              onClick={() => setShowImagePreviewModal(false)}
+              style={{
+                position: 'absolute',
+                top: '-40px',
+                right: 0,
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                color: 'white',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={20} />
+            </button>
+            <img
+              src={fileObjectUrl}
+              alt="Full preview"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                borderRadius: 'var(--radius-md)',
+                objectFit: 'contain',
+                boxShadow: 'var(--shadow-lg)'
+              }}
+            />
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
