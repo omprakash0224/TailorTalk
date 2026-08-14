@@ -2,7 +2,8 @@ streamlit
 qdrant-client
 langchain
 langchain-groq
-google-generativeai
+langgraph
+google-genai
 Pillow
 numpy
 opencv-python-headless

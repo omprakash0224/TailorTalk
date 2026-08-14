@@ -1,0 +1,43 @@
+# ── .dockerignore ────────────────────────────────────────────────────────────
+# Excludes files that must not be copied into the Docker build context.
+# Keeping the context small speeds up builds and avoids leaking secrets.
+
+# Version control
+.git
+.gitattributes
+.gitignore
+
+# Local virtual environments
+venv/
+.venv/
+
+# Local secrets — NEVER bake into the image
+.env
+
+# Large local data (images are served from URLs in production)
+data/images/
+data/*.log
+data/*.csv
+
+# Scripts only needed for local development / offline indexing
+scripts/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Editor configs
+.vscode/
+.idea/
+*.swp
+
+# Extras / local notebooks
+extras/

@@ -11,7 +11,7 @@ from tqdm import tqdm
 # Add src to python path so we can import embeddings
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from src.embeddings import embed_image_gemini, compute_color_histogram
-import google.generativeai as genai
+import google.genai as genai
 
 # Load environment variables
 load_dotenv()
@@ -24,8 +24,6 @@ if not QDRANT_URL or not QDRANT_API_KEY:
     print("Warning: QDRANT_URL or QDRANT_API_KEY not found in environment.")
 if not GEMINI_API_KEY:
     print("Warning: GEMINI_API_KEY not found in environment.")
-else:
-    genai.configure(api_key=GEMINI_API_KEY)
 
 def main():
     if not QDRANT_URL:
@@ -86,7 +84,7 @@ def main():
             # A 0.05s delay gives at most 20 requests/sec = 1200 RPM
             time.sleep(0.05)
             
-            vec_gemini = embed_image_gemini(image_path)
+            vec_gemini = embed_image_gemini(image_path, task_type="RETRIEVAL_DOCUMENT")
             vec_color = compute_color_histogram(image_path)
             
             in_stock = True
