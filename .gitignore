@@ -2,7 +2,9 @@ extras/
 .env
 data/images/
 data/*.log
+data/*.csv
 __pycache__/
+**/__pycache__/
 *.pyc
 .venv/
 venv/

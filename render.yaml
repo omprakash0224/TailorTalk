@@ -1,0 +1,52 @@
+# render.yaml — Render Infrastructure-as-Code
+# Docs: https://render.com/docs/yaml-spec
+#
+# Deploy by connecting this repo in the Render dashboard and selecting
+# "Use render.yaml" when creating the service, OR push this file and Render
+# will auto-detect it.
+#
+# Secrets (GEMINI_API_KEY, QDRANT_URL, QDRANT_API_KEY, GROQ_API_KEY) must be
+# added in the Render dashboard under Environment → Secret Files / Env Vars.
+# Never commit real values here.
+
+services:
+  - type: web
+    name: tailortalk
+    runtime: docker          # tells Render to use our Dockerfile
+
+    # Render builds from the repo root (where the Dockerfile lives)
+    dockerfilePath: ./Dockerfile
+
+    # Render's free tier runs in Oregon; change to match your users
+    region: oregon
+
+    # Use the starter plan for production; "free" for testing
+    plan: starter
+
+    # ── Health check ──────────────────────────────────────────────────────
+    # Render probes this path on the web-service port ($PORT) to decide
+    # whether the deployment is healthy before switching traffic.
+    # Streamlit exposes /_stcore/health natively — no extra code needed.
+    healthCheckPath: /_stcore/health
+
+    # ── Environment variables ─────────────────────────────────────────────
+    # Non-secret, build-time config goes here.
+    # Secret values (API keys) must be added via the Render dashboard UI
+    # under "Environment" → "Add Environment Variable (Secret)".
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      # Health sidecar port (separate from Streamlit's $PORT)
+      - key: HEALTH_PORT
+        value: "8502"
+      # Secret keys — set actual values in the Render dashboard:
+      - key: GEMINI_API_KEY
+        sync: false          # "sync: false" means Render will prompt for the value
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false

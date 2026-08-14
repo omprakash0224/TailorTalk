@@ -4,6 +4,56 @@ from src.agent import create_agent, run_agent
 import tempfile
 import os
 import uuid
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+# ---------------------------------------------------------------------------
+# /health endpoint — lightweight background HTTP server
+# ---------------------------------------------------------------------------
+# Runs on HEALTH_PORT (default 8502) so load balancers / orchestrators can
+# probe liveness without touching the Streamlit websocket.
+# The daemon thread is started once per process (guarded by a module-level
+# flag) and shuts down automatically when Streamlit exits.
+
+_HEALTH_PORT = int(os.environ.get("HEALTH_PORT", "8502"))
+_HEALTH_SERVER_STARTED = False
+
+
+class _HealthHandler(BaseHTTPRequestHandler):
+    """Minimal HTTP handler: GET /health -> 200 JSON, everything else -> 404."""
+
+    def do_GET(self):  # noqa: N802
+        if self.path == "/health":
+            body = json.dumps({"status": "ok", "service": "TailorTalk"}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    # Suppress the default request log lines from cluttering Streamlit output
+    def log_message(self, format, *args):  # noqa: A002
+        pass
+
+
+def _start_health_server() -> None:
+    """Start the health-check HTTP server in a background daemon thread."""
+    global _HEALTH_SERVER_STARTED
+    if _HEALTH_SERVER_STARTED:
+        return
+    _HEALTH_SERVER_STARTED = True
+
+    server = HTTPServer(("0.0.0.0", _HEALTH_PORT), _HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, name="health-server", daemon=True)
+    thread.start()
+
+
+_start_health_server()
+# ---------------------------------------------------------------------------
 
 # Page config
 st.set_page_config(page_title="TailorTalk Saree Search", page_icon="🥻", layout="wide")
