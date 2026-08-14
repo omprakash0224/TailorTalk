@@ -51,18 +51,18 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Document the ports the container exposes.
 # Render only routes external traffic to $PORT (the Streamlit UI).
-# 8502 is the internal /health sidecar — used internally or by custom checks.
 EXPOSE 8501
 EXPOSE 8502
 
 # ── Healthcheck (Docker-level) ───────────────────────────────────────────────
 # Streamlit ships a built-in liveness endpoint at /_stcore/health.
-# Render uses this same endpoint for its HTTP health checks (configured in
-# render.yaml).  The Docker-level check gives visibility in `docker ps`.
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/_stcore/health || exit 1
+# start-period is intentionally generous (60s): loading langchain + google.genai
+# + qdrant-client on a fresh Render container takes 20-40s on the first boot.
+# Render's own health check (render.yaml: healthCheckPath) uses the same endpoint.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+    CMD curl -f http://localhost:${PORT:-8501}/_stcore/health || exit 1
 
 # ── Entrypoint ───────────────────────────────────────────────────────────────
-# Render sets $PORT at runtime.  We pass it explicitly to Streamlit so the
-# app binds to the right port regardless of the default (8501).
-CMD ["sh", "-c", "streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0"]
+# Render injects PORT=10000 at runtime; we pass it explicitly to Streamlit.
+# The ${PORT:-8501} fallback keeps the image runnable locally without any env vars.
+CMD ["sh", "-c", "streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0"]

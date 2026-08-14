@@ -1,14 +1,17 @@
 [server]
-# Render injects $PORT at runtime; the CMD in the Dockerfile passes it via
-# --server.port flag. This file sets additional production-safe defaults.
+# Render injects $PORT at runtime and the Dockerfile CMD passes it via
+# --server.port flag. Do NOT set 'port' here — it would override that flag.
 headless = true
 enableCORS = false
 enableXsrfProtection = false
 
-# Disable the welcome "Do you want to receive product updates?" email prompt
-# and the "Your app is starting up" splash screen.
+# Single worker is sufficient for this app and reduces memory on Render's
+# starter/free tier containers.
+maxUploadSize = 10
+
 [browser]
+# Silence Streamlit's usage-stats prompt at startup.
 gatherUsageStats = false
 
 [theme]
-base = "dark"
+base = "light"

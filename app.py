@@ -59,9 +59,24 @@ _start_health_server()
 st.set_page_config(page_title="TailorTalk Saree Search", page_icon="🥻", layout="wide")
 st.title("🥻 TailorTalk Visual Saree Search")
 
-# Initialize agent (cached via session_state so it's created only once)
+# Initialize agent (cached via session_state so it's created only once per session).
+# Wrapped in try/except so a missing API key shows a clear error banner instead of
+# crashing the script runner — which would prevent Render's health check from passing.
 if "agent" not in st.session_state:
-    st.session_state.agent = create_agent()
+    try:
+        st.session_state.agent = create_agent()
+        st.session_state.agent_error = None
+    except Exception as _agent_exc:
+        st.session_state.agent = None
+        st.session_state.agent_error = str(_agent_exc)
+
+if st.session_state.get("agent_error"):
+    st.error(
+        f"**Agent failed to initialize** — check that all required environment "
+        f"variables are set (GROQ_API_KEY, GEMINI_API_KEY, QDRANT_URL, QDRANT_API_KEY).\n\n"
+        f"Detail: `{st.session_state.agent_error}`"
+    )
+    st.stop()
 
 # Initialize chat history (LangChain message objects) and display messages list
 if "chat_history" not in st.session_state:

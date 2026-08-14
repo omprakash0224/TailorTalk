@@ -11,15 +11,26 @@ from pydantic import BaseModel
 from .embeddings import embed_image_gemini, compute_color_histogram
 
 # ---------------------------------------------------------------------------
-# Qdrant client (module-level singleton, reused across requests)
+# Qdrant client — lazy singleton, created on first use
 # ---------------------------------------------------------------------------
-QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
-QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "")
+# Do NOT create the client at module-level: if the env vars are missing or
+# the cloud cluster is unreachable during Docker startup, the import fails
+# and Render's health check never passes → "Not Found".
+_QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
+_QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "")
+_qdrant_client: QdrantClient | None = None
 
-qdrant = QdrantClient(
-    url=QDRANT_URL,
-    api_key=QDRANT_API_KEY if QDRANT_API_KEY else None,
-)
+
+def _get_qdrant() -> QdrantClient:
+    """Returns a module-level cached QdrantClient, created on first call."""
+    global _qdrant_client
+    if _qdrant_client is None:
+        _qdrant_client = QdrantClient(
+            url=_QDRANT_URL,
+            api_key=_QDRANT_API_KEY if _QDRANT_API_KEY else None,
+            check_compatibility=False,   # suppress version-mismatch warning on startup
+        )
+    return _qdrant_client
 
 # Cache the last query vectors for follow-up filter requests ("show cheaper ones")
 LAST_QUERY_VECTORS: dict = {
@@ -178,7 +189,7 @@ def query_with_vectors(
             )
         )
 
-    response = qdrant.query_points(
+    response = _get_qdrant().query_points(
         collection_name="sarees",
         prefetch=prefetches,
         query=FusionQuery(fusion=Fusion.RRF),
