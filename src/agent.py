@@ -2,7 +2,6 @@ import os
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langgraph.prebuilt import create_react_agent
-from langchain.agents import create_agent
 from dotenv import load_dotenv
 
 from .search_tool import search_similar_sarees
@@ -26,7 +25,7 @@ def create_agent():
     llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
     tools = [search_similar_sarees]
 
-    agent = create_agent(
+    agent = create_react_agent(
         model=llm,
         tools=tools,
         prompt=SYSTEM_PROMPT,
