@@ -22,7 +22,7 @@ When the tool returns results, present them in a friendly summary — the UI wil
 
 def create_agent():
     """Creates and returns a LangGraph ReAct agent with the search tool bound."""
-    llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
     tools = [search_similar_sarees]
 
     agent = create_react_agent(
